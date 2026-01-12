@@ -18,11 +18,23 @@ const app = express();
 const server = http.createServer(app);
 
 // Configure Socket.IO with CORS for production
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      'https://chatapplication-jade.vercel.app',
+      'https://chatapplication-ud8z.onrender.com',
+      process.env.FRONTEND_URL
+    ].filter(Boolean)
+  : ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"];
+
+console.log('CORS Configuration:', {
+  NODE_ENV: process.env.NODE_ENV,
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  allowedOrigins
+});
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? [process.env.FRONTEND_URL]
-      : ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -38,10 +50,24 @@ app.use(rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   maxRequests: 100 // limit each IP to 100 requests per 15 minutes
 }));
+
+// CORS middleware with debugging
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log(`CORS Request from origin: ${origin}`);
+  next();
+});
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? [process.env.FRONTEND_URL]
-    : ["http://localhost:3000", "http://127.0.0.1:3000"],
+  origin: (origin, callback) => {
+    console.log(`CORS check for origin: ${origin}`);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
