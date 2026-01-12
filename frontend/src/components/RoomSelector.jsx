@@ -28,7 +28,7 @@ const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom, onMobileClose, 
       
     } catch (error) {
       console.error('Failed to load rooms:', error);
-      setError('Failed to load rooms');
+      setError('Failed to load rooms - using default rooms');
       
       // Fallback to default rooms
       const defaultRooms = [
@@ -133,6 +133,36 @@ const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom, onMobileClose, 
     } catch (error) {
       console.error('Failed to create room:', error);
       setError(error.message || 'Failed to create room');
+      
+      // Fallback: Create room locally (basic functionality)
+      if (error.message.includes('Network Error') || error.message.includes('CORS')) {
+        const roomName = trimmedName.toLowerCase().replace(/\s+/g, '-');
+        const fallbackRoom = {
+          name: roomName,
+          displayName: trimmedName,
+          description: newRoomDescription,
+          messageCount: 0,
+          isActive: true,
+          isPrivate: false, // Disable private features if API fails
+          canJoin: true
+        };
+        
+        setRooms(prev => [...prev, fallbackRoom]);
+        onCreateRoom?.(fallbackRoom);
+        
+        // Clear form
+        setNewRoomName('');
+        setNewRoomDescription('');
+        setIsPrivateRoom(false);
+        setRoomPassword('');
+        setShowCreateForm(false);
+        
+        // Switch to new room
+        onRoomChange(roomName);
+        onMobileClose?.();
+        
+        setError('Room created locally (private features unavailable)');
+      }
     }
   };
 
