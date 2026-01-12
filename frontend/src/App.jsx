@@ -410,6 +410,7 @@ function App() {
             currentRoom={currentRoom}
             onRoomChange={handleRoomChange}
             onCreateRoom={handleCreateRoom}
+            currentUser={username}
           />
           <UserList
             users={onlineUsers}
@@ -448,6 +449,7 @@ function App() {
               onRoomChange={handleRoomChange}
               onCreateRoom={handleCreateRoom}
               onMobileClose={closeMobileUserList}
+              currentUser={username}
             />
             <UserList
               users={onlineUsers}

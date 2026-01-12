@@ -124,9 +124,10 @@ export const healthAPI = {
 // Rooms API
 export const roomsAPI = {
   // Get all available rooms
-  getRooms: async () => {
+  getRooms: async (username = null) => {
     try {
-      const response = await api.get('/rooms');
+      const params = username ? { username } : {};
+      const response = await api.get('/rooms', { params });
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch rooms: ${error.message}`);
@@ -134,11 +135,14 @@ export const roomsAPI = {
   },
 
   // Create a new room
-  createRoom: async (name, description = '') => {
+  createRoom: async (name, description = '', isPrivate = false, password = '', createdBy) => {
     try {
       const response = await api.post('/rooms', {
         name: name.trim(),
-        description: description.trim()
+        description: description.trim(),
+        isPrivate,
+        password: password.trim() || undefined,
+        createdBy: createdBy.trim()
       });
       return response.data;
     } catch (error) {
@@ -146,6 +150,31 @@ export const roomsAPI = {
         throw new Error('Room already exists');
       }
       throw new Error(`Failed to create room: ${error.response?.data?.error || error.message}`);
+    }
+  },
+
+  // Join a private room
+  joinRoom: async (roomName, username, inviteCode = '', password = '') => {
+    try {
+      const response = await api.post('/rooms/join', {
+        roomName: roomName.trim(),
+        username: username.trim(),
+        inviteCode: inviteCode.trim() || undefined,
+        password: password.trim() || undefined
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to join room: ${error.response?.data?.error || error.message}`);
+    }
+  },
+
+  // Get room info by invite code
+  getRoomByInviteCode: async (inviteCode) => {
+    try {
+      const response = await api.get(`/rooms/invite/${inviteCode.trim()}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get room info: ${error.response?.data?.error || error.message}`);
     }
   },
 
