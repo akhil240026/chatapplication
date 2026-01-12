@@ -21,6 +21,7 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [showMobileUserList, setShowMobileUserList] = useState(false);
 
   // Refs
   const messagesEndRef = useRef(null);
@@ -144,6 +145,13 @@ function App() {
       console.error('Socket error:', error);
       const chatError = errorHandler.handleSocketError(error);
       setConnectionError(errorHandler.getUserMessage(chatError));
+    });
+
+    // Listen for room creation events
+    socket.on('room_created', (data) => {
+      console.log('New room created:', data);
+      // You could show a notification here or refresh room list
+      // For now, the RoomSelector component will handle periodic refresh
     });
 
   }, [isLoggedIn, username, currentRoom]);
@@ -280,6 +288,15 @@ function App() {
     console.log('Room created:', roomData);
     // Room creation is handled by RoomSelector component
   }, []);
+
+  // Handle mobile user list toggle
+  const toggleMobileUserList = useCallback(() => {
+    setShowMobileUserList(prev => !prev);
+  }, []);
+
+  const closeMobileUserList = useCallback(() => {
+    setShowMobileUserList(false);
+  }, []);
   const handleDeleteMessage = useCallback(async (messageId) => {
     try {
       await messageAPI.deleteMessage(messageId);
@@ -387,6 +404,7 @@ function App() {
           </div>
         </div>
 
+        {/* Desktop User List */}
         <div className="user-list-container">
           <RoomSelector
             currentRoom={currentRoom}
@@ -398,6 +416,45 @@ function App() {
             currentUser={username}
             typingUsers={typingUsers}
           />
+        </div>
+
+        {/* Mobile User List Toggle Button */}
+        <button 
+          className="mobile-user-toggle"
+          onClick={toggleMobileUserList}
+          title="Show users and rooms"
+        >
+          👥
+        </button>
+
+        {/* Mobile User List Overlay */}
+        <div 
+          className={`user-list-overlay ${showMobileUserList ? 'active' : ''}`}
+          onClick={closeMobileUserList}
+        >
+          <div className="user-list-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Users & Rooms</h3>
+              <button 
+                className="modal-close"
+                onClick={closeMobileUserList}
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+            <RoomSelector
+              currentRoom={currentRoom}
+              onRoomChange={handleRoomChange}
+              onCreateRoom={handleCreateRoom}
+              onMobileClose={closeMobileUserList}
+            />
+            <UserList
+              users={onlineUsers}
+              currentUser={username}
+              typingUsers={typingUsers}
+            />
+          </div>
         </div>
       </main>
     </div>

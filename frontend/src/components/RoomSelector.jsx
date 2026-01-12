@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { messageAPI } from '../services/api';
+import { roomsAPI } from '../services/api';
 
-const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom }) => {
+const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom, onMobileClose }) => {
   const [rooms, setRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -15,18 +15,47 @@ const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom }) => {
       setIsLoading(true);
       setError('');
       
-      // For now, we'll use a simple room list since we don't have the rooms API yet
+      const response = await roomsAPI.getRooms();
+      
+      if (response.success) {
+        // Transform API response to match component format
+        const transformedRooms = response.data.rooms.map(room => ({
+          name: room.name,
+          displayName: room.name.charAt(0).toUpperCase() + room.name.slice(1).replace(/-/g, ' '),
+          messageCount: room.messageCount,
+          isActive: room.isActive,
+          lastMessage: room.lastMessage
+        }));
+        
+        // Add default rooms if they don't exist
+        const defaultRooms = ['general', 'random', 'tech'];
+        const existingRoomNames = transformedRooms.map(r => r.name);
+        
+        defaultRooms.forEach(roomName => {
+          if (!existingRoomNames.includes(roomName)) {
+            transformedRooms.unshift({
+              name: roomName,
+              displayName: roomName.charAt(0).toUpperCase() + roomName.slice(1),
+              messageCount: 0,
+              isActive: true
+            });
+          }
+        });
+        
+        setRooms(transformedRooms);
+      }
+      
+    } catch (error) {
+      console.error('Failed to load rooms:', error);
+      setError('Failed to load rooms');
+      
+      // Fallback to default rooms
       const defaultRooms = [
         { name: 'general', displayName: 'General', messageCount: 0, isActive: true },
         { name: 'random', displayName: 'Random', messageCount: 0, isActive: true },
         { name: 'tech', displayName: 'Tech Talk', messageCount: 0, isActive: true }
       ];
-      
       setRooms(defaultRooms);
-      
-    } catch (error) {
-      console.error('Failed to load rooms:', error);
-      setError('Failed to load rooms');
     } finally {
       setIsLoading(false);
     }
@@ -36,9 +65,21 @@ const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom }) => {
     loadRooms();
   }, []);
 
+  // Listen for room creation events
+  useEffect(() => {
+    // This would be better handled through a socket context, but for now we'll reload rooms periodically
+    const interval = setInterval(() => {
+      loadRooms();
+    }, 30000); // Reload every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handleRoomSelect = (roomName) => {
     if (roomName !== currentRoom) {
       onRoomChange(roomName);
+      // Close mobile modal if callback provided
+      onMobileClose?.();
     }
   };
 
@@ -51,29 +92,43 @@ const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom }) => {
     try {
       setError('');
       
-      // Simple room creation - just add to local list
-      const roomName = trimmedName.toLowerCase().replace(/\s+/g, '-');
-      const newRoom = {
-        name: roomName,
-        displayName: trimmedName,
-        messageCount: 0,
-        isActive: true
-      };
+      // Create room via API
+      const response = await roomsAPI.createRoom(trimmedName, newRoomDescription);
       
-      setRooms(prev => [...prev, newRoom]);
-      onCreateRoom?.(newRoom);
-      
-      // Clear form
-      setNewRoomName('');
-      setNewRoomDescription('');
-      setShowCreateForm(false);
-      
-      // Switch to new room
-      onRoomChange(roomName);
+      if (response.success) {
+        const newRoom = response.data.room;
+        
+        // Add to local rooms list
+        const roomForList = {
+          name: newRoom.name,
+          displayName: newRoom.displayName,
+          messageCount: newRoom.messageCount || 0,
+          isActive: true
+        };
+        
+        setRooms(prev => [...prev, roomForList]);
+        onCreateRoom?.(roomForList);
+        
+        // Clear form
+        setNewRoomName('');
+        setNewRoomDescription('');
+        setShowCreateForm(false);
+        
+        // Switch to new room
+        onRoomChange(newRoom.name);
+        
+        // Close mobile modal if callback provided
+        onMobileClose?.();
+        
+        // Reload rooms to get updated data
+        setTimeout(() => {
+          loadRooms();
+        }, 1000);
+      }
       
     } catch (error) {
       console.error('Failed to create room:', error);
-      setError('Failed to create room');
+      setError(error.message || 'Failed to create room');
     }
   };
 
@@ -81,13 +136,37 @@ const RoomSelector = ({ currentRoom, onRoomChange, onCreateRoom }) => {
     <div className="room-selector">
       <div className="room-selector-header">
         <h3>Chat Rooms</h3>
-        <button
-          className="create-room-btn"
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          title="Create new room"
-        >
-          +
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button
+            className="refresh-rooms-btn"
+            onClick={loadRooms}
+            title="Refresh rooms"
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: '#f3f4f6',
+              color: '#6b7280',
+              border: 'none',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '44px',
+              minHeight: '44px'
+            }}
+          >
+            🔄
+          </button>
+          <button
+            className="create-room-btn"
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            title="Create new room"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {error && (

@@ -121,5 +121,46 @@ export const healthAPI = {
   }
 };
 
+// Rooms API
+export const roomsAPI = {
+  // Get all available rooms
+  getRooms: async () => {
+    try {
+      const response = await api.get('/rooms');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch rooms: ${error.message}`);
+    }
+  },
+
+  // Create a new room
+  createRoom: async (name, description = '') => {
+    try {
+      const response = await api.post('/rooms', {
+        name: name.trim(),
+        description: description.trim()
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 409) {
+        throw new Error('Room already exists');
+      }
+      throw new Error(`Failed to create room: ${error.response?.data?.error || error.message}`);
+    }
+  },
+
+  // Get messages for a specific room
+  getRoomMessages: async (roomName, page = 1, limit = 50) => {
+    try {
+      const response = await api.get(`/rooms/${roomName}/messages`, {
+        params: { page, limit }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch room messages: ${error.message}`);
+    }
+  }
+};
+
 // Export axios instance for custom requests
 export default api;

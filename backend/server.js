@@ -49,6 +49,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 // Routes
+// Make io instance available to routes
+app.set('io', io);
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/rooms', require('./routes/rooms'));
 

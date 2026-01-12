@@ -79,16 +79,27 @@ router.post('/', async (req, res) => {
       socketId: 'system'
     });
     
+    const roomData = {
+      name: roomName,
+      displayName: name,
+      description,
+      messageCount: 1,
+      createdAt: welcomeMessage.timestamp
+    };
+    
+    // Emit room creation to all connected clients
+    if (req.app.get('io')) {
+      req.app.get('io').emit('room_created', {
+        room: roomData,
+        message: `New room "${name}" has been created!`,
+        timestamp: new Date()
+      });
+    }
+    
     res.status(201).json({
       success: true,
       data: {
-        room: {
-          name: roomName,
-          displayName: name,
-          description,
-          messageCount: 1,
-          createdAt: welcomeMessage.timestamp
-        }
+        room: roomData
       }
     });
     
