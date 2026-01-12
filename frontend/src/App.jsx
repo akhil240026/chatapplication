@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import socketService from './services/socket';
 import { messageAPI } from './services/api';
 import errorHandler, { ERROR_TYPES } from './utils/errorHandler';
-import ChatMessage from './components/ChatMessage';
-import MessageInput from './components/MessageInput';
-import UserList from './components/UserList';
-import ConnectionStatus from './components/ConnectionStatus';
-import RoomSelector from './components/RoomSelector';
+import ChatMessage from './components/ChatMessage.jsx';
+import MessageInput from './components/MessageInput.jsx';
+import UserList from './components/UserList.jsx';
+import ConnectionStatus from './components/ConnectionStatus.jsx';
+import RoomSelector from './components/RoomSelector.jsx';
 import './App.css';
 
 function App() {
